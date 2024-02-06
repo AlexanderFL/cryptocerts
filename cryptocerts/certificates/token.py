@@ -73,6 +73,12 @@ class CertificateToken(x509.Certificate):
         """
         Tries to load the certificate from the bytes provided with different methods.
         """
+        # Try to load multiple x509 certificates
+        try:
+            return x509.load_pem_x509_certificates(data)
+        except Exception:
+            pass
+
         # Try to load as a PKCS#7 certificate chain
         try:
             return pkcs7.load_pem_pkcs7_certificates(data)

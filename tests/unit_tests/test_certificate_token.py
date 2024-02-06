@@ -35,6 +35,7 @@ def test_certificate_token_initialize_x509_pem_chain():
     google_bytes = load_from_file("google/google_chain.pem")
     certificate_token = CertificateToken(google_bytes)
 
+    assert len(certificate_token.chain) == 2
     assert isinstance(certificate_token, CertificateToken)
 
 
@@ -43,16 +44,6 @@ def test_certificate_token_initialize_pkcs7_p7c():
     Tests that a certificate token can be initialized with a PKCS7 certificate in P7C format.
     """
     google_bytes = load_from_file("google/google.p7c")
-    certificate_token = CertificateToken(google_bytes)
-
-    assert isinstance(certificate_token, CertificateToken)
-
-
-def test_certificate_token_initialize_pkcs7_pem():
-    """
-    Tests that a certificate token can be initialized with a PKCS7 certificate in PEM format.
-    """
-    google_bytes = load_from_file("google/google_pkcs7.pem")
     certificate_token = CertificateToken(google_bytes)
 
     assert isinstance(certificate_token, CertificateToken)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 import pytest
+from freezegun import freeze_time
+from datetime import datetime
 from cryptocerts.certificates import (
     TrustedCertificateStore,
     CertificateToken,
@@ -97,6 +99,7 @@ def test_certificate_verifier_initialize_with_same_certificates_in_trusted_and_i
     pytest.raises(CertificateAlreadyStored, raises_certificate_already_stored)
 
 
+@freeze_time(datetime(2024, 1, 28, 20, 0, 0))
 def test_certificate_verifier_verify_leaf_certificate(
     certificate_verifier: CertificateVerifier, leaf_certificate_token: CertificateToken
 ):
@@ -111,6 +114,7 @@ def test_certificate_verifier_verify_leaf_certificate(
     assert result.signature_intact is True
 
 
+@freeze_time(datetime(2024, 1, 28, 20, 0, 0))
 def test_certificate_verifier_verify_intermediate_certificate(
     certificate_verifier: CertificateVerifier,
     intermediate_certificate_token: CertificateToken,
@@ -126,6 +130,7 @@ def test_certificate_verifier_verify_intermediate_certificate(
     assert result.signature_intact is True
 
 
+@freeze_time(datetime(2024, 1, 28, 20, 0, 0))
 def test_certificate_verifier_verify_root_certificate(
     certificate_verifier: CertificateVerifier, root_certificate_token: CertificateToken
 ):
@@ -140,6 +145,7 @@ def test_certificate_verifier_verify_root_certificate(
     assert result.signature_intact is True
 
 
+@freeze_time(datetime(2024, 1, 28, 20, 0, 0))
 def test_certificate_verifier_pkcs7_verify_leaf_certificate(
     certificate_verifier: CertificateVerifier,
 ):
