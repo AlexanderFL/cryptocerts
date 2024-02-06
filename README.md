@@ -21,7 +21,7 @@ Community contributes are welcome. Please use the Github issue tracker for any f
 Easier loading a certificate without having to know which format it is
 
 ```python
-from cryptocerts.certificates import CertificateToken
+from cryptocerts import CertificateToken
 
 # From a file
 certificate = CertificateToken.load_from_file("filepath/mycert.crt")
@@ -35,19 +35,19 @@ certificate = CertificateToken(b"<certificate bytes>")
 Validate that a certificate is valid up to a custom trusted root
 
 ```python
-from cryptocerts.certificates import (
+from cryptocerts import (
     CertificateToken,
-    CertificateVerifier,
+    CertificateValidator,
     TrustedCertificateStore,
     IntermediaryCertificateStore
 )
 
 my_trusted_roots : list[CertificateToken] = [ ... ]
 my_intermediate_certificates : list[CertificateTokens] = [ ... ]
-certificate_verifier = CertificateVerifier(my_trusted_roots, my_intermediate_certificates)
+certificate_validator = CertificateValidator(my_trusted_roots, my_intermediate_certificates)
 
 certificate = CertificateToken(b"<certificate bytes>")
-result = certificate_verifier.verify_certificate(my_certificate)
+result = certificate_validator.verify_certificate(my_certificate)
 # `result` contains validation info about the certificate
 result.valid_to_trusted_root
 result.signature_intact

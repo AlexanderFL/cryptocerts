@@ -2,16 +2,15 @@ from __future__ import annotations
 import pytest
 from freezegun import freeze_time
 from datetime import datetime
-from cryptocerts.certificates import (
-    TrustedCertificateStore,
+from cryptocerts import (
     CertificateToken,
-    CertificateVerifier,
+)
+from cryptocerts.stores import (
+    TrustedCertificateStore,
     IntermediaryCertificateStore,
 )
+from cryptocerts.validators import CertificateValidator
 from cryptocerts.exceptions import InvalidChain, CertificateAlreadyStored
-
-from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
-from cryptography.hazmat.primitives import serialization
 from ..utils import load_from_file
 
 
@@ -19,9 +18,9 @@ def test_certificate_verifier_initialize_empty():
     """
     Tests that a certificate verifier can be initialized with no arguments.
     """
-    certificate_verifier = CertificateVerifier()
+    certificate_verifier = CertificateValidator()
 
-    assert isinstance(certificate_verifier, CertificateVerifier)
+    assert isinstance(certificate_verifier, CertificateValidator)
 
 
 def test_certificate_verifier_initialize_with_trusted_store(
@@ -33,7 +32,7 @@ def test_certificate_verifier_initialize_with_trusted_store(
     trusted_store = TrustedCertificateStore()
     trusted_store.add_certificate(root_certificate_token)
 
-    certificate_verifier = CertificateVerifier(trusted_store=trusted_store)
+    certificate_verifier = CertificateValidator(trusted_store=trusted_store)
 
     assert len(certificate_verifier._trusted_store.certificates) == 1
 
@@ -51,7 +50,7 @@ def test_certificate_verifier_initialize_with_intermediary_store_valid(
     intermediary_store = IntermediaryCertificateStore()
     intermediary_store.add_certificate(intermediate_certificate_token)
 
-    certificate_verifier = CertificateVerifier(
+    certificate_verifier = CertificateValidator(
         trusted_store=trusted_store, intermediary_store=intermediary_store
     )
 
@@ -70,7 +69,7 @@ def test_certificate_verifier_initialize_with_intermediary_store_invalid_chain(
         intermediary_store.add_certificate(intermediate_certificate_token)
 
         # This should raise an InvalidChain exception
-        certificate_verifier = CertificateVerifier(
+        certificate_verifier = CertificateValidator(
             intermediary_store=intermediary_store
         )
 
@@ -92,7 +91,7 @@ def test_certificate_verifier_initialize_with_same_certificates_in_trusted_and_i
         intermediary_store.add_certificate(root_certificate_token)
 
         # This should raise an CertificateAlreadyStored exception
-        certificate_verifier = CertificateVerifier(
+        certificate_verifier = CertificateValidator(
             trusted_store=trusted_store, intermediary_store=intermediary_store
         )
 
@@ -101,12 +100,12 @@ def test_certificate_verifier_initialize_with_same_certificates_in_trusted_and_i
 
 @freeze_time(datetime(2024, 1, 28, 20, 0, 0))
 def test_certificate_verifier_verify_leaf_certificate(
-    certificate_verifier: CertificateVerifier, leaf_certificate_token: CertificateToken
+    certificate_verifier: CertificateValidator, leaf_certificate_token: CertificateToken
 ):
     """
     Tests that a certificate verifier can verify a leaf certificate.
     """
-    result = certificate_verifier.verify_certificate(leaf_certificate_token)
+    result = certificate_verifier.validate_certificate(leaf_certificate_token)
 
     assert result.valid_to_trusted_root is True
     assert result.is_expired is False
@@ -116,13 +115,13 @@ def test_certificate_verifier_verify_leaf_certificate(
 
 @freeze_time(datetime(2024, 1, 28, 20, 0, 0))
 def test_certificate_verifier_verify_intermediate_certificate(
-    certificate_verifier: CertificateVerifier,
+    certificate_verifier: CertificateValidator,
     intermediate_certificate_token: CertificateToken,
 ):
     """
     Tests that a certificate verifier can verify an intermediate certificate.
     """
-    result = certificate_verifier.verify_certificate(intermediate_certificate_token)
+    result = certificate_verifier.validate_certificate(intermediate_certificate_token)
 
     assert result.valid_to_trusted_root is True
     assert result.is_expired is False
@@ -132,12 +131,12 @@ def test_certificate_verifier_verify_intermediate_certificate(
 
 @freeze_time(datetime(2024, 1, 28, 20, 0, 0))
 def test_certificate_verifier_verify_root_certificate(
-    certificate_verifier: CertificateVerifier, root_certificate_token: CertificateToken
+    certificate_verifier: CertificateValidator, root_certificate_token: CertificateToken
 ):
     """
     Tests that a certificate verifier can verify a root certificate.
     """
-    result = certificate_verifier.verify_certificate(root_certificate_token)
+    result = certificate_verifier.validate_certificate(root_certificate_token)
 
     assert result.valid_to_trusted_root is True
     assert result.is_expired is False
@@ -147,7 +146,7 @@ def test_certificate_verifier_verify_root_certificate(
 
 @freeze_time(datetime(2024, 1, 28, 20, 0, 0))
 def test_certificate_verifier_pkcs7_verify_leaf_certificate(
-    certificate_verifier: CertificateVerifier,
+    certificate_verifier: CertificateValidator,
 ):
     """
     Tests that a certificate verifier can verify a leaf certificate using PKCS7.
@@ -155,7 +154,7 @@ def test_certificate_verifier_pkcs7_verify_leaf_certificate(
     certificate = CertificateToken(
         load_from_file("cloudflare/developers.cloudflare_pkcs7.p7b")
     )
-    result = certificate_verifier.verify_certificate(certificate)
+    result = certificate_verifier.validate_certificate(certificate)
 
     assert result.valid_to_trusted_root is False
     assert result.is_expired is False

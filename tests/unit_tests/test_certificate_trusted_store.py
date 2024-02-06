@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import pytest
-from cryptocerts.certificates import TrustedCertificateStore, CertificateToken
+from cryptocerts.stores import TrustedCertificateStore
+from cryptocerts import CertificateToken
 from cryptocerts.exceptions import InvalidCertificate
 
 

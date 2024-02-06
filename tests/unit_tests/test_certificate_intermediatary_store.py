@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import pytest
-from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
-from cryptocerts.certificates import CertificateToken, IntermediaryCertificateStore
+from cryptocerts import CertificateToken
+from cryptocerts.stores import IntermediaryCertificateStore
 from cryptocerts.exceptions import InvalidCertificate
 
 

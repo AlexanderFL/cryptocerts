@@ -1,3 +1,3 @@
-from .certificates.token import CertificateToken
-from .certificates.stores import TrustedCertificateStore, IntermediaryCertificateStore
-from .certificates.verifier import CertificateVerifier
+from .token import CertificateToken
+from .stores import TrustedCertificateStore, IntermediaryCertificateStore
+from .validators.certificate_validator import CertificateValidator

@@ -18,7 +18,7 @@ from cryptocerts.exceptions import (
     CertificateExpired,
     InvalidChain,
 )
-from cryptocerts.certificates.utils import try_build_certificate_chain
+from cryptocerts.utils import try_build_certificate_chain
 
 
 class CertificateToken(x509.Certificate):

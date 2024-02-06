@@ -1,9 +1,11 @@
 from __future__ import annotations
 import pytest
-from cryptocerts.certificates import (
+from cryptocerts import (
     CertificateToken,
+)
+from cryptocerts.validators import CertificateValidator
+from cryptocerts.stores import (
     TrustedCertificateStore,
-    CertificateVerifier,
     IntermediaryCertificateStore,
 )
 from .utils import load_from_file
@@ -35,7 +37,7 @@ def certificate_verifier(
     intermediary_store = IntermediaryCertificateStore()
     intermediary_store.add_certificate(intermediate_certificate_token)
 
-    certificate_verifier = CertificateVerifier(
+    certificate_verifier = CertificateValidator(
         trusted_store=trusted_store, intermediary_store=intermediary_store
     )
 

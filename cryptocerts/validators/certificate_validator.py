@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 
-from .stores import TrustedCertificateStore, IntermediaryCertificateStore
+from cryptocerts.stores import TrustedCertificateStore, IntermediaryCertificateStore
 from cryptocerts.exceptions import (
     CertificateAlreadyStored,
     InvalidCertificate,
@@ -9,10 +9,10 @@ from cryptocerts.exceptions import (
     CertificateExpired,
     CertificateNotYetValid,
 )
-from cryptocerts.certificates.token import CertificateToken
+from cryptocerts.token import CertificateToken
 
 
-class CertificateVerifier:
+class CertificateValidator:
     """
     An object that can verify certificates using a trusted and intermediary store.
     """
@@ -64,14 +64,14 @@ class CertificateVerifier:
                 )
         self._intermediary_store = store
 
-    def verify_certificate(self, certificate: CertificateToken) -> VerificationResult:
+    def validate_certificate(self, certificate: CertificateToken) -> ValidationResult:
         """
         Verifies a certificate using the trusted and intermediary store.
 
         TODO: Refactor this method to be more readable.
         """
 
-        result = VerificationResult(False, False, False, False)
+        result = ValidationResult(False, False, False, False)
 
         # Verify the validity period
         try:
@@ -144,7 +144,7 @@ class CertificateVerifier:
 
 
 @dataclass
-class VerificationResult:
+class ValidationResult:
     valid_to_trusted_root: bool
     not_yet_valid: bool
     is_expired: bool

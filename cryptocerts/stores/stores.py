@@ -1,4 +1,4 @@
-from cryptocerts.certificates.token import CertificateToken
+from cryptocerts.token import CertificateToken
 from cryptocerts.exceptions import InvalidCertificate
 
 
