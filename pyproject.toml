@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cryptocerts"
-version = "0.0.1a2"
+version = "0.0.1a3"
 authors = [
   { name="Alexander Freyr", email="alex@alexfreyr.com" },
 ]
@@ -19,6 +19,7 @@ dependencies = [
     "cryptography",
     "requests"
 ]
+requires-python = ">=3.10"
 
 readme = "README.md"
 license = { file = "LICENSE" }
