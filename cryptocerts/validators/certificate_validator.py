@@ -22,11 +22,11 @@ class CertificateValidator:
 
     def __init__(
         self,
-        certificates_store: CertificatesStore,
+        certificates_store: CertificatesStore | None = None,
         certificate_path_builder: CertificatePathBuilder | None = None,
     ):
-        self.certificates_store = certificates_store
-        self.certificate_path_builder = certificate_path_builder or CertificatePathBuilder(certificates_store)
+        self.certificates_store = certificates_store or CertificatesStore(None, None)
+        self.certificate_path_builder = certificate_path_builder or CertificatePathBuilder(self.certificates_store)
 
     def validate_certificate(self, certificate: CertificateToken, validation_time: datetime | None = None) -> ValidationResult:
         """

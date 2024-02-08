@@ -7,6 +7,7 @@ from freezegun import freeze_time
 
 from cryptocerts import CertificateToken
 from cryptocerts.exceptions import CertificateAlreadyStored, InvalidChain
+from cryptocerts.paths import CertificatePathBuilder
 from cryptocerts.stores import (
     CertificatesStore,
     IntermediaryCertificateStore,
@@ -18,7 +19,18 @@ from cryptocerts.validators.enums import ValidationStatus, ValidatorErrors
 from ..utils import load_from_file
 
 
-def test_certificate_verifier_initialize_empty(certificates_store: CertificatesStore):
+def test_certificate_verifier_initialize_empty():
+    """
+    Tests that a certificate verifier can be initialized with an empty store.
+    """
+    certificate_verifier = CertificateValidator()
+
+    assert isinstance(certificate_verifier, CertificateValidator)
+    assert isinstance(certificate_verifier.certificates_store, CertificatesStore)
+    assert isinstance(certificate_verifier.certificate_path_builder, CertificatePathBuilder)
+
+
+def test_certificate_verifier_initialize_minimal(certificates_store: CertificatesStore):
     """
     Tests that a certificate verifier can be initialized with an minimal store.
     """
