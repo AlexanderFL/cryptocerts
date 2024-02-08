@@ -1,24 +1,24 @@
 from __future__ import annotations
+
+from datetime import datetime, timezone
+
 from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec, padding
+from cryptography.hazmat.primitives.asymmetric.types import CertificatePublicKeyTypes
+from cryptography.hazmat.primitives.serialization import pkcs7
 from cryptography.x509.base import Version
 from cryptography.x509.extensions import Extensions
-from cryptography.hazmat.primitives import serialization
 from cryptography.x509.name import Name
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.serialization import pkcs7
-from cryptography.hazmat.primitives.asymmetric import ec, padding
 from cryptography.x509.oid import ObjectIdentifier
-from cryptography.hazmat.primitives.asymmetric.types import (
-    CertificatePublicKeyTypes,
-)
-from datetime import datetime, timezone
+
 from cryptocerts.exceptions import (
-    InvalidCertificate,
-    CertificateNotYetValid,
     CertificateExpired,
+    CertificateNotYetValid,
+    InvalidCertificate,
     InvalidChain,
 )
-from cryptocerts.utils import try_build_certificate_chain
+from cryptocerts.utils import ensure_aware_datetime, try_build_certificate_chain
 
 
 class CertificateToken(x509.Certificate):
@@ -26,9 +26,9 @@ class CertificateToken(x509.Certificate):
     Represents an X.509 certificate.
     """
 
-    def __init__(self, data: bytes):
-        if not isinstance(data, bytes):
-            raise InvalidCertificate("Data must be bytes")
+    def __init__(self, data: bytes | x509.Certificate):
+        if not isinstance(data, bytes) and not isinstance(data, x509.Certificate):
+            raise InvalidCertificate("Data must be bytes or x509.Certificate")
 
         data_loaded = CertificateToken.load_x509_from_bytes(data)
 
@@ -69,10 +69,13 @@ class CertificateToken(x509.Certificate):
             return CertificateToken(f.read())
 
     @staticmethod
-    def load_x509_from_bytes(data: bytes) -> x509.Certificate | list[x509.Certificate]:
+    def load_x509_from_bytes(data: bytes | x509.Certificate) -> x509.Certificate | list[x509.Certificate]:
         """
         Tries to load the certificate from the bytes provided with different methods.
         """
+        if isinstance(data, x509.Certificate):
+            return data
+
         # Try to load multiple x509 certificates
         try:
             return x509.load_pem_x509_certificates(data)
@@ -113,19 +116,24 @@ class CertificateToken(x509.Certificate):
         except Exception:
             return False
 
-    def check_validitiy_period(self) -> None:
+    def check_validitiy_period(self, validation_time: datetime | None = None) -> None:
         """
-        Checks the validity period of the certificate.
+        Checks if the certificate is valid at the given time.
+
+        :param
+            `validation_time`: The time to check if a certificate is valid. If None, the current time will be used.
 
         Raises:
             `CertificateExpired`: The certificate has expired.
             `CertificateNotYetValid`: The certificate is not yet valid.
         """
 
-        if self.not_valid_before_utc > datetime.now(timezone.utc):
+        validation_time = ensure_aware_datetime(validation_time)
+
+        if validation_time < self.not_valid_before_utc:
             raise CertificateNotYetValid(f"Certificate {self} is not yet valid")
 
-        if self.not_valid_after_utc < datetime.now(timezone.utc):
+        if validation_time > self.not_valid_after_utc:
             raise CertificateExpired(f"Certificate {self} has expired")
 
     def __str__(self) -> str:

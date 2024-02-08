@@ -1,15 +1,18 @@
 from __future__ import annotations
-from dataclasses import dataclass
 
-from cryptocerts.stores import TrustedCertificateStore, IntermediaryCertificateStore
-from cryptocerts.exceptions import (
-    CertificateAlreadyStored,
-    InvalidCertificate,
-    InvalidChain,
-    CertificateExpired,
-    CertificateNotYetValid,
-)
+from datetime import datetime
+
+from cryptography.exceptions import InvalidSignature
+
+from cryptocerts.exceptions import CertificateExpired, CertificateNotYetValid
+from cryptocerts.paths.builder import CertificatePathBuilder
+from cryptocerts.stores import CertificatesStore
+from cryptocerts.stores.exceptions import CertificateNotFoundError
 from cryptocerts.token import CertificateToken
+from cryptocerts.utils import ensure_aware_datetime
+from cryptocerts.validators.enums import ValidationStatus, ValidatorErrors
+
+from .objects import CertificateValidationResult, ValidationResult
 
 
 class CertificateValidator:
@@ -19,133 +22,75 @@ class CertificateValidator:
 
     def __init__(
         self,
-        trusted_store: TrustedCertificateStore | None = None,
-        intermediary_store: IntermediaryCertificateStore | None = None,
+        certificates_store: CertificatesStore,
+        certificate_path_builder: CertificatePathBuilder | None = None,
     ):
-        self._trusted_store = (
-            trusted_store if trusted_store is not None else TrustedCertificateStore()
-        )
-        self._intermediary_store = (
-            intermediary_store
-            if intermediary_store is not None
-            else IntermediaryCertificateStore()
-        )
+        self.certificates_store = certificates_store
+        self.certificate_path_builder = certificate_path_builder or CertificatePathBuilder(certificates_store)
 
-        self.set_trusted_store(self._trusted_store)
-        self.set_intermediary_store(self._intermediary_store)
-
-    def set_trusted_store(self, store: TrustedCertificateStore) -> None:
-        """
-        Sets the trusted store of the verifier.
-        """
-        self._trusted_store = store
-
-    def set_intermediary_store(self, store: IntermediaryCertificateStore) -> None:
-        """
-        Sets the intermediary store of the verifier.
-        """
-        for cert in store.certificates:
-            if cert in self._trusted_store:
-                raise CertificateAlreadyStored(
-                    "Certificate is already in the trusted store"
-                )
-
-            is_valid = False
-            for trusted_certs in self._trusted_store:
-                try:
-                    cert.verify_directly_issued_by(trusted_certs._x509_cert)
-                    is_valid = True
-                except:
-                    pass
-
-            if not is_valid:
-                raise InvalidChain(
-                    f"CertificateToken {cert} can't be built to a trusted certificate. (Did you forget to add the issuer to the trusted store?)"
-                )
-        self._intermediary_store = store
-
-    def validate_certificate(self, certificate: CertificateToken) -> ValidationResult:
+    def validate_certificate(self, certificate: CertificateToken, validation_time: datetime | None = None) -> ValidationResult:
         """
         Verifies a certificate using the trusted and intermediary store.
 
-        TODO: Refactor this method to be more readable.
+        Can optionally take a `validation_time` to validate the certificate at a specific time.
         """
 
-        result = ValidationResult(False, False, False, False)
+        validation_time = ensure_aware_datetime(validation_time)
+        path = self.certificate_path_builder.build(certificate)
 
-        # Verify the validity period
+        # Immediately check if the last certificate (root) is in the trusted store
         try:
-            certificate.check_validitiy_period()
-        except CertificateNotYetValid:
-            result.not_yet_valid = True
-        except CertificateExpired:
-            result.is_expired = True
+            trusted_certificate = self.certificates_store.get_certificate_by_name_from_trusted(path[len(path) - 1].subject)
+        except CertificateNotFoundError:
+            trusted_certificate = None
 
-        # Self signed certificate are easy to verify
-        if certificate.is_self_signed():
-            result.signature_intact = True
-            if certificate in self._trusted_store:
-                result.valid_to_trusted_root = True
-            return result
+        validation_result = ValidationResult(
+            certificate_validation_result=[],
+            validation_time=validation_time,
+            valid_to_trusted_root=trusted_certificate is not None,
+            validation_conclusion=ValidationStatus.UNKNOWN,
+        )
 
-        # Verify the certificate chain if there is one
-        if certificate.chain != []:
-            selected_cert = certificate.x509_cert
-            for cert_in_chain in certificate.chain:
-                try:
-                    selected_cert.verify_directly_issued_by(cert_in_chain)
-                    selected_cert = cert_in_chain
-                except Exception:
-                    raise InvalidCertificate(
-                        f"Certificate chain is invalid at {selected_cert}"
-                    )
-            result.signature_intact = True
+        for i, certificate_token in enumerate(path):
+            errors: list[ValidatorErrors] = []
 
-            # Verify the certificate against the trusted store
-            if certificate.chain[len(certificate.chain) - 1] in self._trusted_store:
-                result.valid_to_trusted_root = True
-            return result
-
-        # No certificate chain, so we need to build the chain ourselves using the stores
-        intermediate_chain_complete = False
-        valid_to_trusted = False
-        certificate_chain: list[CertificateToken] = []
-        last_chain_length = 0
-        selected_x509cert = certificate.x509_cert
-
-        while not intermediate_chain_complete:
-
-            for x509_cert in self._intermediary_store:
-                try:
-                    selected_x509cert.verify_directly_issued_by(x509_cert.x509_cert)
-                    certificate_chain.append(x509_cert)
-                    selected_x509cert = x509_cert.x509_cert
-                    result.signature_intact = True
-                except Exception:
-                    pass
-
-            if last_chain_length == len(certificate_chain):
-                intermediate_chain_complete = True
-            last_chain_length += 1
-
-        for x509_cert in self._trusted_store:
+            # Check if certificate is valid at the given time
             try:
-                selected_x509cert.verify_directly_issued_by(x509_cert.x509_cert)
-                certificate_chain.append(x509_cert)
-                valid_to_trusted = True
-                result.signature_intact = True
-            except Exception:
+                certificate_token.check_validitiy_period(validation_time)
+            except CertificateNotYetValid as e:
+                errors.append(ValidatorErrors.NOT_YET_VALID)
+            except CertificateExpired as e:
+                errors.append(ValidatorErrors.EXPIRED)
+
+            # Check if the certificate is in the trusted store
+            try:
+                certificate_token.verify_directly_issued_by(path[i + 1].x509_cert)
+            except InvalidSignature:
+                errors.append(ValidatorErrors.SIGNATURE_INVALID)
+            except IndexError:
                 pass
 
-        if valid_to_trusted:
-            result.valid_to_trusted_root = True
+            # Check if the certificate is traceable to a trusted root
+            if trusted_certificate is None:
+                errors.append(ValidatorErrors.NO_TRUSTED_ROOT)
 
-        return result
+            # TODO: Check for revocation
 
+            result = CertificateValidationResult(
+                certificate_token=certificate_token,
+                validation_errors=errors,
+                validation_status=(ValidationStatus.INVALID if errors else ValidationStatus.VALID),
+            )
 
-@dataclass
-class ValidationResult:
-    valid_to_trusted_root: bool
-    not_yet_valid: bool
-    is_expired: bool
-    signature_intact: bool
+            validation_result.certificate_validation_result.append(result)
+
+        # If any certificate in the chain is invalid, the whole chain is invalid
+        if any(
+            certificate_result.validation_status == ValidationStatus.INVALID
+            for certificate_result in validation_result.certificate_validation_result
+        ):
+            validation_result.validation_conclusion = ValidationStatus.INVALID
+        else:
+            validation_result.validation_conclusion = ValidationStatus.VALID
+
+        return validation_result

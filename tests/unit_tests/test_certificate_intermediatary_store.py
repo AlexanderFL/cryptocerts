@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import pytest
+
 from cryptocerts import CertificateToken
-from cryptocerts.stores import IntermediaryCertificateStore
 from cryptocerts.exceptions import InvalidCertificate
+from cryptocerts.stores import IntermediaryCertificateStore
 
 
 def test_intermediary_store_add_certificate(

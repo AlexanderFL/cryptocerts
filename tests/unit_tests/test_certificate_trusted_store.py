@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import pytest
-from cryptocerts.stores import TrustedCertificateStore
+
 from cryptocerts import CertificateToken
 from cryptocerts.exceptions import InvalidCertificate
+from cryptocerts.stores import TrustedCertificateStore
 
 
 def test_trusted_store_add_certificate(root_certificate_token: CertificateToken):

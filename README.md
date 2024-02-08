@@ -38,19 +38,26 @@ Validate that a certificate is valid up to a custom trusted root
 from cryptocerts import (
     CertificateToken,
     CertificateValidator,
-    TrustedCertificateStore,
-    IntermediaryCertificateStore
+    CertificatesStore
 )
 
 my_trusted_roots : list[CertificateToken] = [ ... ]
 my_intermediate_certificates : list[CertificateTokens] = [ ... ]
-certificate_validator = CertificateValidator(my_trusted_roots, my_intermediate_certificates)
+certificates_store = CertificatesStore(my_trusted_roots, my_intermediate_certificates)
+certificate_validator = CertificateValidator(certificates_store)
 
-certificate = CertificateToken(b"<certificate bytes>")
-result = certificate_validator.verify_certificate(my_certificate)
-# `result` contains validation info about the certificate
-result.valid_to_trusted_root
-result.signature_intact
-result.not_yet_valid
-result.is_expired
+# `result` contains validation info about the certificate, 
+# f.x. a valid certificate
+result = certificate_validator.verify_certificate(certificate)
+result.validation_conclusion # ValidationStatus.VALID
+result.valid_to_trusted_root # True
+result.certificate_validation_result[0].certificate_token # <certificate>
+result.certificate_validation_result[0].validation_errors # []
+
+# and an invalid certificate
+result = certificate_validator.verify_certificate(invalid_certificate)
+result.validation_conclusion # ValidationStatus.INVALID
+result.valid_to_trusted_root # True
+result.certificate_validation_result[0].certificate_token # <invalid_certificate>
+result.certificate_validation_result[0].validation_errors # [ValidatorErrors.EXPIRED]
 ```

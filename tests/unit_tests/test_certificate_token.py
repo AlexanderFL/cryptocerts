@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import os
-from cryptocerts import CertificateToken
+
 from cryptography import x509
+
+from cryptocerts import CertificateToken
+
 from ..utils import load_from_file
 
 

@@ -1,5 +1,8 @@
-from cryptocerts.token import CertificateToken
+from cryptography.x509 import Name
+
 from cryptocerts.exceptions import InvalidCertificate
+from cryptocerts.stores.exceptions import CertificateNotFoundError
+from cryptocerts.token import CertificateToken
 
 
 class CertificateStore:
@@ -22,14 +25,10 @@ class CertificateStore:
         Adds a certificate to the trusted store.
         """
         if not isinstance(certificate, CertificateToken):
-            raise InvalidCertificate(
-                f"Certificate {certificate} is not a CertificateToken."
-            )
+            raise InvalidCertificate(f"Certificate {certificate} is not a CertificateToken.")
         self._certificates.append(certificate)
 
-    def remove_certificate(
-        self, certificate: CertificateToken
-    ) -> CertificateToken | None:
+    def remove_certificate(self, certificate: CertificateToken) -> CertificateToken | None:
         """
         Removes a certificate from the trusted store and returns it.
         """
@@ -38,6 +37,15 @@ class CertificateStore:
         except ValueError:
             return None
         return certificate
+
+    def get_certificate_by_name(self, name: Name) -> CertificateToken:
+        """
+        Get a certificate by its name.
+        """
+        for cert in self._certificates:
+            if cert.subject == name:
+                return cert
+        raise CertificateNotFoundError(f"Certificate with subject {name} not found")
 
     def __iter__(self):
         return iter(self._certificates)

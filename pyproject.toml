@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cryptocerts"
-version = "0.0.1a1"
+version = "0.0.1a2"
 authors = [
   { name="Alexander Freyr", email="alex@alexfreyr.com" },
 ]
@@ -17,6 +17,7 @@ classifiers = [
 ]
 dependencies = [
     "cryptography",
+    "requests"
 ]
 
 readme = "README.md"

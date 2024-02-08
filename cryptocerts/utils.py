@@ -1,4 +1,7 @@
+from datetime import datetime, timezone
+
 from cryptography import x509
+
 from cryptocerts.exceptions import InvalidChain
 
 
@@ -46,3 +49,14 @@ def try_build_certificate_chain(certificates: list[x509.Certificate]):
 
     ordered_chain.reverse()
     return ordered_chain
+
+
+def ensure_aware_datetime(dt: datetime | None) -> datetime:
+    """
+    Ensures that a datetime is aware. If the datetime is None, returns the current time in UTC.
+    """
+    if dt is None:
+        return datetime.now(timezone.utc)
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
